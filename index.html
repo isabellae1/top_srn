@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>TOP-SRX Dashboard</title>
+  <style>
+    /* —— Reset & 全屏 —— */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; }
+    body { font-family: 'Segoe UI', sans-serif; background: #fafafa; }
+    a { text-decoration: none; color: inherit; cursor: pointer; }
+
+    /* —— 登录 & 主页面 叠放 —— */
+    #login-page, #main-page {
+      position: absolute; top: 0; left: 0;
+      width: 100%; height: 100%;
+    }
+
+    /* —— 登录页 —— */
+    #login-page {
+      display: flex; align-items: center; justify-content: center;
+      background: url('icons/login_background_tl.png') center/cover no-repeat;
+    }
+    #login-box {
+      width: 380px; padding: 40px 30px;
+      background: rgba(255,255,255,0.9); border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.1); text-align: center;
+    }
+    #login-box h2 { font-size: 24px; margin-bottom: 24px; color: #333; }
+    .input-group { position: relative; margin-bottom: 20px; }
+    .input-group img {
+      position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+      width: 20px; height: 20px; opacity: 0.6;
+    }
+    .input-group input {
+      width: 100%; padding: 12px 12px 12px 44px;
+      border: 1px solid #ccc; border-radius: 6px; font-size: 14px;
+      transition: border-color .2s;
+    }
+    .input-group input:focus { border-color: #ff7043; outline: none; }
+    #login-btn {
+      width: 100%; padding: 12px; margin-top: 10px;
+      background: #ff7043; color: #fff; border: none;
+      border-radius: 6px; font-size: 16px; cursor: pointer;
+      transition: background .2s;
+    }
+    #login-btn:hover { background: #f4511e; }
+    .links { margin-top: 16px; font-size: 13px; }
+    .links a { margin: 0 8px; color: #ff7043; }
+
+    /* —— 主页面 —— */
+    #main-page { display: none; flex-direction: column; }
+    #app { height: 100%; display: flex; flex-direction: column; }
+
+    /* 顶栏 */
+    #header {
+      flex: 0 0 60px; display: flex;
+      align-items: center; justify-content: space-between;
+      padding: 0 20px; background: #f60; color: #fff;
+    }
+    .header-left, .header-right { display: flex; align-items: center; }
+    .header-left .logo { height: 60px; margin-right: 20px; }
+    .header-left .nav-item {
+      display: flex; align-items: center; margin-right: 20px;
+    }
+    .header-left .nav-item img {
+      width: 20px; height: 20px; margin-right: 5px;
+    }
+    .header-right img.avatar {
+      width: 30px; height: 30px; border-radius: 50%;
+      background: #ddd; margin-right: 10px;
+    }
+    .header-right span, .header-right a { margin-right: 20px; }
+
+    /* 主体：左右布局 */
+    #main-container { flex: 1; display: flex; overflow: hidden; }
+
+    /* 侧边菜单 */
+    #sidebar {
+      width: 250px; background: #fff;
+      border-right: 1px solid #ddd; overflow-y: auto;
+    }
+    #sidebar ul { list-style: none; }
+    .menu-title {
+      display: flex; align-items: center;
+      padding: 12px 20px; cursor: pointer;
+    }
+    .menu-title .icon {
+      width: 24px; height: 24px; margin-right: 10px;
+    }
+    .menu-text { display: flex; flex-direction: column; }
+    .title-en { font-size: 16px; color: #333; }
+    .title-cn { font-size: 12px; color: #666; margin-top: 2px; }
+    .arrow {
+      margin-left: auto; font-size: 14px;
+      transition: transform .2s;
+    }
+
+    /* 子菜单默认折叠 & 背景透明 */
+    #sidebar .submenu {
+      list-style: none; display: none;
+      margin: 0; padding: 0;
+      background: transparent !important;
+    }
+
+    /* 一级子菜单缩进 & 行高 */
+    #sidebar .submenu > li {
+      padding: 8px 20px 8px 44px;
+      cursor: pointer; line-height: 1.4;
+    }
+    /* 二级孙菜单再多缩20px */
+    #sidebar .submenu .submenu > li {
+      padding: 8px 20px 8px 64px;
+      cursor: pointer; line-height: 1.4;
+    }
+
+    /* 仅叶子节点 hover 高亮 */
+    #sidebar .submenu > li.leaf:hover,
+    #sidebar .submenu .submenu > li.leaf:hover {
+      background: #f0f0f0 !important;
+    }
+    /* 含有子菜单的项保持透明 */
+    #sidebar .submenu > li.menu-item:hover,
+    #sidebar .submenu .submenu > li.menu-item:hover {
+      background: transparent !important;
+    }
+
+    /* 右侧上下 Pane */
+    #content {
+      flex: 1; display: flex; flex-direction: column;
+    }
+    .pane {
+      flex: 1; position: relative;
+      background: url('icons/logo_background_200.png') repeat;
+      background-size: 200px 200px;
+    }
+    .disconnect {
+      position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%,-50%);
+      text-align: center; color: #333; font-size: 18px;
+      line-height: 1.4;
+    }
+    .disconnect img { width: 100px; margin-bottom: 12px; }
+    .disconnect a { color: #f60; }
+  </style>
+</head>
+<body>
+
+  <!-- 登录页 -->
+  <div id="login-page">
+    <div id="login-box">
+      <h2>欢迎登录 TOP-SRX</h2>
+      <div class="input-group">
+        <img src="icons/user-icon.svg" alt="用户">
+        <input type="text" id="username" placeholder="请输入用户名">
+      </div>
+      <div class="input-group">
+        <img src="icons/lock-icon.svg" alt="密码">
+        <input type="password" id="password" placeholder="请输入密码">
+      </div>
+      <button id="login-btn">登录</button>
+      <div class="links">
+        <a>忘记密码？</a> | <a>注册账号</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- 主页面 -->
+  <div id="main-page">
+    <div id="app">
+
+      <!-- 顶栏 -->
+      <div id="header">
+        <div class="header-left">
+          <img src="icons/logo.png" class="logo" alt="Logo">
+        </div>
+        <div class="header-right">
+          <img src="icons/avatar.png" class="avatar" alt="头像">
+          <span>liyichen</span>
+          <a>关于</a>
+          <a id="logout-btn">退出</a>
+        </div>
+      </div>
+
+      <!-- 左 + 右 布局 -->
+      <div id="main-container">
+        <aside id="sidebar">
+          <ul>
+            <!-- 1. TOP Insight -->
+            <li class="menu-item">
+              <div class="menu-title">
+                <img src="icons/insight.png" class="icon" alt="">
+                <div class="menu-text">
+                  <span class="title-en">TOP Insight</span>
+                  <span class="title-cn">消费者人群画像系统</span>
+                </div>
+                <span class="arrow">▶</span>
+              </div>
+              <ul class="submenu">
+                <li>数据概览</li>
+                <li>人群画像</li>
+                <li>对比分析</li>
+                <li>应用场景</li>
+              </ul>
+            </li>
+            <!-- 2. TOP WOM -->
+            <li class="menu-item">
+              <div class="menu-title">
+                <img src="icons/wom.png" class="icon" alt="">
+                <div class="menu-text">
+                  <span class="title-en">TOP WOM</span>
+                  <span class="title-cn">口碑监测系统</span>
+                </div>
+                <span class="arrow">▶</span>
+              </div>
+              <ul class="submenu">
+                <li>舆情概览</li>
+                <li>话题分析</li>
+                <li>内容分析</li>
+                <li>来源分析</li>
+                <li>预警中心</li>
+                <li>报告生成</li>
+              </ul>
+            </li>
+            <!-- 3. TOP AD -->
+            <li class="menu-item">
+              <div class="menu-title">
+                <img src="icons/ad.png" class="icon" alt="">
+                <div class="menu-text">
+                  <span class="title-en">TOP AD</span>
+                  <span class="title-cn">广告监测系统</span>
+                </div>
+                <span class="arrow">▶</span>
+              </div>
+              <ul class="submenu">
+                <li>广告投放概览</li>
+                <li>投放结案</li>
+                <li class="menu-item">
+                  <div class="menu-title">
+                    <div class="menu-text"><span class="title-en">内容分析</span></div>
+                    <span class="arrow">▶</span>
+                  </div>
+                  <ul class="submenu">
+                    <li>创意分析</li>
+                    <li>内容分析</li>
+                    <li>受众分析</li>
+                  </ul>
+                </li>
+              </ul>
+            </li>
+            <!-- 4. TOP DRAMA -->
+            <li class="menu-item">
+              <div class="menu-title">
+                <img src="icons/drama.png" class="icon" alt="">
+                <div class="menu-text">
+                  <span class="title-en">TOP DRAMA</span>
+                  <span class="title-cn">大剧评估系统</span>
+                </div>
+                <span class="arrow">▶</span>
+              </div>
+              <ul class="submenu">
+                <li>剧集热度</li>
+                <li>口碑评价</li>
+                <li>受众分析</li>
+                <li>营销效果</li>
+              </ul>
+            </li>
+            <!-- 5. TOP KOL -->
+            <li class="menu-item">
+              <div class="menu-title">
+                <img src="icons/kol.png" class="icon" alt="">
+                <div class="menu-text">
+                  <span class="title-en">TOP KOL</span>
+                  <span class="title-cn">KOL评估系统</span>
+                </div>
+                <span class="arrow">▶</span>
+              </div>
+              <ul class="submenu">
+                <li class="menu-item">
+                  <div class="menu-title">
+                    <div class="menu-text"><span class="title-en">发现KOL</span></div>
+                    <span class="arrow">▶</span>
+                  </div>
+                  <ul class="submenu">
+                    <li>内容类型</li>
+                    <li>粉丝画像</li>
+                    <li>合作效果</li>
+                  </ul>
+                </li>
+                <li>合作管理</li>
+                <li>水号检测</li>
+              </ul>
+            </li>
+            <!-- 6. TOP DMP -->
+            <li class="menu-item">
+              <div class="menu-title">
+                <img src="icons/dmp.png" class="icon" alt="">
+                <div class="menu-text">
+                  <span class="title-en">TOP DMP</span>
+                  <span class="title-cn">数据管理平台</span>
+                </div>
+                <span class="arrow">▶</span>
+              </div>
+              <ul class="submenu">
+                <li class="menu-item">
+                  <div class="menu-title">
+                    <div class="menu-text"><span class="title-en">数据源管理</span></div>
+                    <span class="arrow">▶</span>
+                  </div>
+                  <ul class="submenu">
+                    <li>数据接入配置</li>
+                    <li>交互设计</li>
+                  </ul>
+                </li>
+                <li>数据清洗与加工</li>
+                <li>数据集管理</li>
+              </ul>
+            </li>
+            <!-- 7. TOP entertainment -->
+            <li class="menu-item">
+              <div class="menu-title">
+                <img src="icons/entertainment.png" class="icon" alt="">
+                <div class="menu-text">
+                  <span class="title-en">TOP entertainment</span>
+                  <span class="title-cn">综艺评估系统</span>
+                </div>
+                <span class="arrow">▶</span>
+              </div>
+              <ul class="submenu">
+                <li>节目档案库</li>
+                <li>智能筛选器</li>
+                <li class="menu-item">
+                  <div class="menu-title">
+                    <div class="menu-text"><span class="title-en">节目价值评估面板</span></div>
+                    <span class="arrow">▶</span>
+                  </div>
+                  <ul class="submenu">
+                    <li>收视表现 &amp; 用户画像</li>
+                    <li>广告位与植入方案</li>
+                  </ul>
+                </li>
+              </ul>
+            </li>
+          </ul>
+        </aside>
+
+        <!-- 右侧 Pane -->
+        <section id="content">
+          <div class="pane top">
+            <div class="disconnect">
+              <img src="icons/sad.png" alt="">
+              <p>未连接办公 Wi-Fi？ <a onclick="location.reload()">刷新重试</a></p>
+            </div>
+          </div>
+          <div class="pane bottom">
+            <div class="disconnect">
+              <img src="icons/sad.png" alt="">
+              <p>未连接办公 Wi-Fi？ <a onclick="location.reload()">刷新重试</a></p>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 恢复登录状态
+    document.addEventListener('DOMContentLoaded', () => {
+      if (sessionStorage.getItem('loggedIn') === '1') {
+        document.getElementById('login-page').style.display = 'none';
+        document.getElementById('main-page').style.display = 'flex';
+      }
+    });
+
+    // 登录
+    document.getElementById('login-btn').onclick = () => {
+      sessionStorage.setItem('loggedIn', '1');
+      sessionStorage.removeItem('openMenus');
+      document.getElementById('login-page').style.display = 'none';
+      document.getElementById('main-page').style.display = 'flex';
+    };
+
+    // 退出
+    document.getElementById('logout-btn').onclick = e => {
+      e.preventDefault();
+      sessionStorage.removeItem('loggedIn');
+      sessionStorage.removeItem('openMenus');
+      document.getElementById('main-page').style.display = 'none';
+      document.getElementById('login-page').style.display = 'flex';
+    };
+
+    // 分配 data-id
+    const titles = Array.from(document.querySelectorAll('.menu-title'));
+    titles.forEach((el, idx) => el.dataset.id = idx);
+
+    // 恢复展开状态
+    const saved = sessionStorage.getItem('openMenus');
+    if (saved) {
+      JSON.parse(saved).forEach(id => {
+        const el = titles.find(t => t.dataset.id === id);
+        const sub = el.nextElementSibling;
+        if (sub && sub.classList.contains('submenu')) {
+          sub.style.display = 'block';
+          el.querySelector('.arrow').textContent = '▼';
+        }
+      });
+    }
+
+    // 保存展开状态
+    function saveState() {
+      const openIds = titles
+        .filter(el => {
+          const sub = el.nextElementSibling;
+          return sub && sub.style.display === 'block';
+        })
+        .map(el => el.dataset.id);
+      sessionStorage.setItem('openMenus', JSON.stringify(openIds));
+    }
+
+    // 一级菜单点击：展开/折叠 or 刷新
+    titles.forEach(el => {
+      el.addEventListener('click', () => {
+        const sub = el.nextElementSibling;
+        if (!sub || !sub.classList.contains('submenu')) {
+          saveState(); location.reload(); return;
+        }
+        const isOpen = sub.style.display === 'block';
+        sub.style.display = isOpen ? 'none' : 'block';
+        el.querySelector('.arrow').textContent = isOpen ? '▶' : '▼';
+        saveState();
+      });
+    });
+
+    // 标记叶子节点
+    document.querySelectorAll('#sidebar .submenu > li').forEach(li => {
+      if (!li.querySelector('ul')) li.classList.add('leaf');
+    });
+
+    // 叶子节点点击：仅刷新右侧
+    document.querySelectorAll('#sidebar .submenu > li.leaf').forEach(li => {
+      li.addEventListener('click', () => {
+        saveState(); location.reload();
+      });
+    });
+  </script>
+</body>
+</html>
